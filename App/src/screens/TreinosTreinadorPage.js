@@ -19,8 +19,9 @@ const TreinosTreinadorPage = () => {
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false); 
   const [selectedUsers, setSelectedUsers] = useState({});
   const [selectedExercises, setSelectedExercises] = useState({});
-  const [showExerciseConfig, setShowExerciseConfig] = useState(false);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+  const [ShowExerciseConfig,setShowExerciseConfig] = useState(null);
+
   const [exerciseConfig, setExerciseConfig] = useState({
     series: 1,
     repeticoes: 1,
@@ -110,7 +111,9 @@ const TreinosTreinadorPage = () => {
         return (
           agendamentoDate >= startOfWeek &&
           agendamentoDate <= endOfWeek &&
-          agendamento.aceito === false
+          agendamento.aceito === false &&
+          agendamento.Estado !== "Agendamento Recusado" 
+
         );
       });
 
@@ -137,25 +140,53 @@ const TreinosTreinadorPage = () => {
 
 
   const handleFinalizarAgendamento = async () => {
+    if (!selectedItem || !selectedExercises || !Object.keys(selectedExercises).length) {
+      alert("Nenhum exercício foi selecionado. Por favor, configure os exercícios antes de finalizar.");
+      return;
+    }
+  
     try {
       await firestore()
         .collection('agendamentos')
         .doc(selectedItem.id)
-        .update({ aceito: true });
+        .update({
+          aceito: true,
+          Estado: "Agendamento Aceite!",
+        });
   
-      console.log('Agendamento finalizado com sucesso!');
-      handleCloseModal();
+      const novoTreino = {
+        data: selectedItem.data, 
+        hora: selectedItem.data, 
+        treinadorId: treinadorId, 
+        usuarios: [
+          selectedItem.userId, 
+          ...Object.keys(selectedUsers).filter(userId => selectedUsers[userId]), 
+        ],
+        exercicios: Object.keys(selectedExercises).map(exerciseId => ({
+          id: exerciseId,
+          ...exerciseConfig[exerciseId], 
+        })),
+      };
+  
+      await firestore().collection('treinos').add(novoTreino);
+  
+      alert("Agendamento finalizado e treino criado com sucesso!");
+      handleCloseModal(); 
     } catch (error) {
-      console.error('Erro a finalizar o agendamento:', error);
+      console.error('Erro ao finalizar o agendamento e criar o treino:', error);
+      alert("Erro ao finalizar o agendamento. Por favor, tente novamente.");
     }
   };
+  
+  
   
   const handleRecusarAgendamento = async () => {
     try {
       await firestore()
         .collection('agendamentos')
         .doc(selectedItem.id)
-        .update({ aceito: false });
+        //.update({ aceito: false })
+        .update({ Estado: "Agendamento Recusado"});
   
       console.log('Agendamento recusado com sucesso!');
       handleCloseModal(); 
@@ -235,62 +266,60 @@ const TreinosTreinadorPage = () => {
       </View>
     );
   };
-  
-  
 
   return (
     <ScrollView style={styles.container}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={styles.scheduleContainer}>
-      <View style={styles.scheduleContainer}>
-        {Array.from({ length: 7 }, (_, index) => renderSchedule(index))}
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={styles.scheduleContainer}>
+        <View style={styles.scheduleContainer}>
+          {Array.from({ length: 7 }, (_, index) => renderSchedule(index))}
+        </View>
       </ScrollView>
       <Modal
-  visible={modalVisible}
-  animationType="slide"
-  onRequestClose={handleCloseModal}
->
-  <ScrollView>
-    <View style={styles.modalContainer}>
-      {modalType === 'treino' ? (
-        <View>
-          <Text style={styles.modalTitle}>Detalhes do Treino</Text>
-          <Text style={[styles.dateTimeText, { fontWeight: 'bold', fontSize: 18 }]}>
-            Data: {new Date(selectedItem?.data).toLocaleDateString()}
-          </Text>
-          <Text style={[styles.dateTimeText, { fontWeight: 'bold', fontSize: 18 }]}>
-            Hora: {new Date(selectedItem?.hora).toLocaleTimeString()}
-          </Text>
+      visible={modalVisible}
+      animationType="slide"
+      onRequestClose={handleCloseModal}
+      >
+        <ScrollView>
+          <View style={styles.modalContainer}>
+            {modalType === 'treino' ? (
+              <View>
+                <Text style={styles.modalTitle}>Detalhes do Treino</Text>
+                <Text style={[styles.dateTimeText, { fontWeight: 'bold', fontSize: 18 }]}>
+                  Data: {new Date(selectedItem?.data).toLocaleDateString()}
+                </Text>
+                <Text style={[styles.dateTimeText, { fontWeight: 'bold', fontSize: 18 }]}>
+                  Hora: {new Date(selectedItem?.hora).toLocaleTimeString()}
+                </Text>
 
-          <Text style={styles.modalSubtitle}>Exercícios:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {selectedItem?.exercicios?.map((exercicio, index) => {
-              const exercicioDetalhes = exercicios.find(e => e.id === exercicio.id);
-              return (
-                <View key={exercicio.id} style={styles.horizontalCard}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16,  }}>
-                    {exercicioDetalhes?.nome || 'Exercício Desconhecido'}
-                  </Text>
-                  <Text>Séries: {exercicio.series}</Text>
-                  <Text>Repetições: {exercicio.repeticoes}</Text>
-                  <Text>Tempo: {exercicio.tempo} min</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
+                <Text style={styles.modalSubtitle}>Exercícios:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {selectedItem?.exercicios?.map((exercicio, index) => {
+                    const exercicioDetalhes = exercicios.find(e => e.id === exercicio.id);
+                    return (
+                      <View key={exercicio.id} style={styles.horizontalCard}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 16,  }}>
+                          {exercicioDetalhes?.nome || 'Exercício Desconhecido'}
+                        </Text>
+                        <Text>Séries: {exercicio.series}</Text>
+                        <Text>Repetições: {exercicio.repeticoes}</Text>
+                        <Text>Tempo: {exercicio.tempo} min</Text>
+                      </View>
+                    );
+                  })}
+        </ScrollView>
 
           <Text style={styles.modalSubtitle}>Utilizadores:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {selectedItem?.usuarios?.map(userId => {
-              const user = utilizadores.find(user => user.id === userId);
-              return (
-                <View key={userId} style={styles.horizontalCard}>
-                  <Text>{user?.email || 'Desconhecido'}</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {selectedItem?.usuarios?.map(userId => {
+            const user = utilizadores.find(user => user.id === userId);
+            return (
+              <View key={userId} style={styles.horizontalCard}>
+                <Text>{user?.email || 'Desconhecido'}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
       ) : (
         <View>
           <Text style={styles.modalTitle}>Detalhes do Agendamento</Text>
@@ -312,72 +341,70 @@ const TreinosTreinadorPage = () => {
               <View style={{ marginVertical: 20 }}>
                 <Text style={styles.modalSubtitle}>Exercícios:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-  <View style={styles.exerciseListContainer}>
-    {exercicios.map((exercicio) => (
-      <TouchableOpacity
-        key={exercicio.id}
-        style={[
-          styles.exerciseCard,
-          selectedExercises[exercicio.id] && { backgroundColor: '#d3f9d8' },
-        ]}
-        onPress={() => handleExerciseSelection(exercicio.id)}
-      >
-        <Text style={styles.exerciseTitle}>{exercicio.nome}</Text>
-        {selectedExercises[exercicio.id] && (
-          <View style={styles.configContainer}>
-            <View style={styles.configRow}>
-              <Text>Séries:</Text>
-              <InputSpinner
-                max={10}
-                min={1}
-                step={1}
-                value={exerciseConfig[exercicio.id]?.series || 1}
-                onChange={(num) =>
-                  setExerciseConfig((prev) => ({
-                    ...prev,
-                    [exercicio.id]: { ...prev[exercicio.id], series: num },
-                  }))
-                }
-              />
-            </View>
-            <View style={styles.configRow}>
-              <Text>Repetições:</Text>
-              <InputSpinner
-                max={20}
-                min={1}
-                step={1}
-                value={exerciseConfig[exercicio.id]?.repeticoes || 1}
-                onChange={(num) =>
-                  setExerciseConfig((prev) => ({
-                    ...prev,
-                    [exercicio.id]: { ...prev[exercicio.id], repeticoes: num },
-                  }))
-                }
-              />
-            </View>
-            <View style={styles.configRow}>
-              <Text>Tempo (s):</Text>
-              <InputSpinner
-                max={300}
-                min={1}
-                step={1}
-                value={exerciseConfig[exercicio.id]?.tempo || 1}
-                onChange={(num) =>
-                  setExerciseConfig((prev) => ({
-                    ...prev,
-                    [exercicio.id]: { ...prev[exercicio.id], tempo: num },
-                  }))
-                }
-              />
-            </View>
-          </View>
-        )}
-      </TouchableOpacity>
-    ))}
-  </View>
-</ScrollView>
-
-
+                  <View style={styles.exerciseListContainer}>
+                    {exercicios.map((exercicio) => (
+                      <TouchableOpacity
+                        key={exercicio.id}
+                        style={[
+                          styles.exerciseCard,
+                          selectedExercises[exercicio.id] && { backgroundColor: '#d3f9d8' },
+                        ]}
+                        onPress={() => handleExerciseSelection(exercicio.id)}
+                      >
+                        <Text style={styles.exerciseTitle}>{exercicio.nome}</Text>
+                        {selectedExercises[exercicio.id] && (
+                          <View style={styles.configContainer}>
+                            <View style={styles.configRow}>
+                              <Text>Séries:</Text>
+                              <InputSpinner
+                                max={10}
+                                min={1}
+                                step={1}
+                                value={exerciseConfig[exercicio.id]?.series || 1}
+                                onChange={(num) =>
+                                  setExerciseConfig((prev) => ({
+                                    ...prev,
+                                    [exercicio.id]: { ...prev[exercicio.id], series: num },
+                                  }))
+                                }
+                              />
+                            </View>
+                            <View style={styles.configRow}>
+                              <Text>Repetições:</Text>
+                              <InputSpinner
+                                max={20}
+                                min={1}
+                                step={1}
+                                value={exerciseConfig[exercicio.id]?.repeticoes || 1}
+                                onChange={(num) =>
+                                  setExerciseConfig((prev) => ({
+                                    ...prev,
+                                    [exercicio.id]: { ...prev[exercicio.id], repeticoes: num },
+                                  }))
+                                }
+                              />
+                            </View>
+                            <View style={styles.configRow}>
+                              <Text>Tempo (s):</Text>
+                              <InputSpinner
+                                max={300}
+                                min={1}
+                                step={1}
+                                value={exerciseConfig[exercicio.id]?.tempo || 1}
+                                onChange={(num) =>
+                                  setExerciseConfig((prev) => ({
+                                    ...prev,
+                                    [exercicio.id]: { ...prev[exercicio.id], tempo: num },
+                                  }))
+                                }
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
               </View>
 
               <View style={{ marginVertical: 20 }}>
@@ -411,7 +438,6 @@ const TreinosTreinadorPage = () => {
         </View>
       )}
 
-      {/* Botões da Modal */}
       <View style={styles.buttonsContainer}>
         {modalType === 'agendamento' && isCheckboxChecked && (
           <TouchableOpacity
@@ -431,17 +457,14 @@ const TreinosTreinadorPage = () => {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>Fechar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+      </Modal>
   </ScrollView>
-</Modal>
-
-
-
-    </ScrollView>
   );
 };
 
