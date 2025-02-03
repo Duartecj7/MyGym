@@ -1,8 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-const MenuUser = ({ navigation, role,clienteId }) => {
-  
+import { useRoute } from '@react-navigation/native'; // Importa o hook useRoute
+
+const MenuUser = ({ navigation }) => {
+  const route = useRoute(); // Usa o hook useRoute para obter a rota atual
+  const { role, clientEmail, gymId } = route.params; 
+  console.log("Ginásio ID:"+gymId);
   const clientButtons  = [
     { id: 1, title: 'Perfil', image: require('../assets/images/profile.png'), screen: 'User' },  
     { id: 2, title: 'Treinadores', image: require('../assets/images/treinador.png') },
@@ -20,6 +24,8 @@ const MenuUser = ({ navigation, role,clienteId }) => {
     { id: 2, title: 'Treinos Agendados', image: require('../assets/images/profile.png'), screen:"TreinosTreinador" },
     { id: 3, title: 'Exercicios', image: require('../assets/images/profile.png') , screen:"AdicionarExercicios" },
     { id: 4, title: 'Treino', image: require('../assets/images/profile.png'), screen:"CriarTreino" },
+    { id: 5, title: 'Modalidades', image: require('../assets/images/profile.png'), screen:"Modalidades" },
+
   ];
 
   const buttons = role === 'admin' ? adminButtons : clientButtons;
@@ -29,14 +35,16 @@ const MenuUser = ({ navigation, role,clienteId }) => {
         {buttons.map((button, index) => (
           <TouchableOpacity
             key={button.id}
-            style={[
-              styles.button,
-              index % 3 === 0 && { marginLeft: 0 },
-              (index + 1) % 3 === 0 && { marginRight: 0 },
-            ]}
+            style={[styles.button, 
+                    index % 3 === 0 && { marginLeft: 0 }, 
+                    (index + 1) % 3 === 0 && { marginRight: 0 },
+                  ]}
             onPress={() => {
               if (button.screen) {
-                navigation.navigate(button.screen, { clientId: clienteId });
+                navigation.navigate(button.screen, { 
+                  clientEmail: clientEmail, 
+                  gymId: gymId  // Passando o ID do ginásio aqui
+                });
               }
             }}
           >

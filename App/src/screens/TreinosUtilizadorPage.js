@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-const TreinosUtilizadorPage = () => {
+const TreinosUtilizadorPage = ({ route }) => {
   const [userId, setUserId] = useState(null);
   const [treinos, setTreinos] = useState([]);
   const [agendamentos, setAgendamentos] = useState([]);
@@ -15,6 +15,7 @@ const TreinosUtilizadorPage = () => {
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedTreino, setSelectedTreino] = useState(null);
   const [selectedAgendamento, setSelectedAgendamento] = useState(null);
+  const { gymId } = route.params;
 
   useEffect(() => {
     const currentUser = auth().currentUser;
@@ -33,16 +34,16 @@ const TreinosUtilizadorPage = () => {
   const fetchTreinos = async () => {
     try {
       const snapshot = await firestore()
+        .collection('ginasios').doc(gymId)  
         .collection('treinos')
         .where('usuarios', 'array-contains', userId)
         .get();
-
       const allTreinos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-
-      const startOfWeek = new Date();
+        console.log(allTreinos);
+              const startOfWeek = new Date();
       startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -60,8 +61,7 @@ const TreinosUtilizadorPage = () => {
 
   const fetchAgendamentos = async () => {
     try {
-      const snapshot = await firestore().collection('agendamentos').get();
-
+      const snapshot = await firestore().collection('ginasios').doc(gymId).collection('agendamentos').get();
       const allAgendamentos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -90,15 +90,30 @@ const TreinosUtilizadorPage = () => {
       console.error('Erro ao procurar os agendamentos:', error);
     }
   };
-  const handleModalOpen = (item) => {
+  const handleModalOpen = async (item) => {
     if (item.type === 'treino') {
-      setSelectedTreino(item);  
       setSelectedAgendamento(null); 
+  
+      try {
+        if (item.treinadorId) {
+          const treinadorDoc = await firestore().collection('ginasios').doc(gymId).collection('utilizadores').doc(item.treinadorId).get();
+
+          const treinadorNome = treinadorDoc.exists ? treinadorDoc.data().nome : 'Desconhecido';
+          
+          setSelectedTreino({ ...item, treinadorNome });
+        } else {
+          setSelectedTreino({ ...item, treinadorNome: 'Não informado' });
+        }
+      } catch (error) {
+        console.error('Erro ao buscar treinador:', error);
+        setSelectedTreino({ ...item, treinadorNome: 'Erro ao buscar' });
+      }
     } else {
-      setSelectedAgendamento(item);  
-      setSelectedTreino(null);  
+      setSelectedTreino(null);
+      setSelectedAgendamento(item);
     }
-};
+  };
+  
   
 const renderSchedule = (day) => {
   const dayTreinos = treinos.filter(treino => new Date(treino.data).getDay() === day);
@@ -137,7 +152,7 @@ const renderSchedule = (day) => {
           }}
         >
           <Text style={styles.cardText}>
-            {item.type === 'treino' ? 'Treino' : 'Agendamento'}
+            {item.type === 'treino' ? 'Treino' : item.Estado}
           </Text>
           <Text style={styles.cardText}>
             {new Date(item.data).toLocaleTimeString()}
@@ -218,7 +233,7 @@ const renderSchedule = (day) => {
               onPress={async () => {
                 if (selectedTime) {
                   try {
-                    await firestore().collection('agendamentos').add({
+                    await firestore().collection('ginasios').doc(gymId).collection('agendamentos').add({
                       userId: userId,
                       data: selectedTime,
                       aceito: false,
@@ -259,8 +274,9 @@ const renderSchedule = (day) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Detalhes do Treino</Text>
-            <Text>Treino ID: {selectedTreino?.id}</Text>
+            <Text>Treinador : {selectedTreino?.treinadorNome}</Text>
             <Text>Data: {new Date(selectedTreino?.data).toLocaleDateString()}</Text>
+            <Text>Hora: {new Date(selectedTreino?.data).toLocaleTimeString()}</Text>
             <TouchableOpacity
               onPress={() => setSelectedTreino(null)}
               style={styles.modalButton}

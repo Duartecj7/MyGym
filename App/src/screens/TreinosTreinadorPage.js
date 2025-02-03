@@ -7,7 +7,7 @@ import CheckBox from '@react-native-community/checkbox';
 
 const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-const TreinosTreinadorPage = () => {
+const TreinosTreinadorPage = ({route}) => {
   const [treinadorId, setTreinadorId] = useState(null);
   const [treinos, setTreinos] = useState([]);
   const [agendamentos, setAgendamentos] = useState([]);
@@ -21,6 +21,7 @@ const TreinosTreinadorPage = () => {
   const [selectedExercises, setSelectedExercises] = useState({});
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [ShowExerciseConfig,setShowExerciseConfig] = useState(null);
+  const { gymId } = route.params;
 
   const [exerciseConfig, setExerciseConfig] = useState({
     series: 1,
@@ -42,7 +43,7 @@ const TreinosTreinadorPage = () => {
 
   const fetchUtilizadores = async () => {
     try {
-      const snapshot = await firestore().collection('clientes').get();
+      const snapshot = await firestore().collection('ginasios').doc(gymId).collection('utilizadores').get();
       
       const usuariosData = snapshot.docs
         .map(doc => ({
@@ -52,7 +53,7 @@ const TreinosTreinadorPage = () => {
           ativo: doc.data().ativo,
           ...doc.data(),
         }))
-        .filter(user => user.roles === 'cliente' && user.ativo === true); 
+        .filter(user => user.role === 'cliente' && user.ativo === true); 
   
       setUtilizadores(usuariosData);
     } catch (error) {
@@ -63,7 +64,7 @@ const TreinosTreinadorPage = () => {
 
   const fetchTreinos = async () => {
     try {
-      const snapshot = await firestore()
+      const snapshot = await firestore().collection('ginasios').doc(gymId)
         .collection('treinos')
         .where('treinadorId', '==', treinadorId)
         .get();
@@ -91,7 +92,7 @@ const TreinosTreinadorPage = () => {
 
   const fetchAgendamentos = async () => {
     try {
-      const snapshot = await firestore().collection('agendamentos').get();
+      const snapshot = await firestore().collection('ginasios').doc(gymId).collection('agendamentos').get();
 
       const allAgendamentos = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -126,7 +127,7 @@ const TreinosTreinadorPage = () => {
 
   const fetchExercicios = async () =>{
     try{
-        firestore().collection('exercicios').get()
+        firestore().collection('ginasios').doc(gymId).collection('exercicios').get()
               .then(snapshot => {
                 const exercicios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setExercicios(exercicios);
@@ -146,7 +147,7 @@ const TreinosTreinadorPage = () => {
     }
   
     try {
-      await firestore()
+      await firestore().collection('ginasios').doc(gymId)
         .collection('agendamentos')
         .doc(selectedItem.id)
         .update({
@@ -168,7 +169,7 @@ const TreinosTreinadorPage = () => {
         })),
       };
   
-      await firestore().collection('treinos').add(novoTreino);
+      await firestore().collection('ginasios').doc(gymId).collection('treinos').add(novoTreino);
   
       alert("Agendamento finalizado e treino criado com sucesso!");
       handleCloseModal(); 
@@ -182,7 +183,7 @@ const TreinosTreinadorPage = () => {
   
   const handleRecusarAgendamento = async () => {
     try {
-      await firestore()
+      await firestore().collection('ginasios').doc(gymId)
         .collection('agendamentos')
         .doc(selectedItem.id)
         //.update({ aceito: false })
@@ -243,27 +244,24 @@ const TreinosTreinadorPage = () => {
   
     return (
       <View style={styles.column}>
-        <Text style={styles.dayLabel}>{days[day]}</Text>
-        {sortedList.map(item => (
-          <TouchableOpacity
-            key={`${item.type}-${item.id}`} 
-            style={[
-              styles.card,
-              { backgroundColor: item.type === 'treino' ? 'green' : 'orange' }, 
-            ]}
-            onPress={() => handleOpenModal(item, item.type)}
-          >
-            {item.type === 'treino' ? (
-              <Text>{new Date(item.data).toLocaleTimeString()}</Text>
-            ) : (
-              <>
-                <Text>Agendamento com: {item.userId}</Text>
-                <Text>{new Date(item.data).toLocaleTimeString()}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+  <Text style={styles.dayLabel}>{days[day]}</Text>
+  <FlatList
+    data={sortedList}
+    keyExtractor={(item) => item.id}
+    renderItem={({ item }) => (
+      <TouchableOpacity
+        style={[
+          styles.card,
+          { backgroundColor: item.type === 'treino' ? 'green' : 'orange' },
+        ]}
+        onPress={() => handleOpenModal(item, item.type)}
+      >
+        <Text>{new Date(item.data).toLocaleTimeString()}</Text>
+      </TouchableOpacity>
+    )}
+  />
+</View>
+
     );
   };
 
@@ -296,7 +294,8 @@ const TreinosTreinadorPage = () => {
                   {selectedItem?.exercicios?.map((exercicio, index) => {
                     const exercicioDetalhes = exercicios.find(e => e.id === exercicio.id);
                     return (
-                      <View key={exercicio.id} style={styles.horizontalCard}>
+                      <View key={exercicio.id || `exercicio-${index}`}
+                      style={styles.horizontalCard}>
                         <Text style={{ fontWeight: 'bold', fontSize: 16,  }}>
                           {exercicioDetalhes?.nome || 'Exercício Desconhecido'}
                         </Text>
@@ -314,7 +313,7 @@ const TreinosTreinadorPage = () => {
             const user = utilizadores.find(user => user.id === userId);
             return (
               <View key={userId} style={styles.horizontalCard}>
-                <Text>{user?.email || 'Desconhecido'}</Text>
+                <Text>{user?.nome || 'Desconhecido'}</Text>
               </View>
             );
           })}
@@ -323,7 +322,7 @@ const TreinosTreinadorPage = () => {
       ) : (
         <View>
           <Text style={styles.modalTitle}>Detalhes do Agendamento</Text>
-          <Text>Cliente: {selectedItem?.userId}</Text>
+          <Text>Pedido do cliente:{utilizadores.find(user => user.id === selectedItem?.userId)?.nome || 'Desconhecido'}</Text>
           <Text style={[styles.dateTimeText, { fontWeight: 'bold', fontSize: 18 }]}>
             Data: {new Date(selectedItem?.data).toLocaleString()}
           </Text>
@@ -488,11 +487,15 @@ const styles = StyleSheet.create({
   },
   scheduleContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 10,
+    flexWrap: 'wrap', 
   },
   column: {
+    flex:1,
     width: '14%',
     padding: 5,
+    alignItems: "center"
   },
   dayColumn: {
     width: 200, 

@@ -21,6 +21,8 @@ const AdicionarExercicioPage = ({ route, navigation }) => {
     'costas',
   ];
 
+  const { gymId } = route.params; 
+  
   const handleAddExercise = async () => {
     if (!nome || !musculos) {
       Alert.alert('Erro', 'Os campos Nome e Músculos são obrigatórios.');
@@ -35,11 +37,13 @@ const AdicionarExercicioPage = ({ route, navigation }) => {
       };
 
       await firestore()
-        .collection('exercicios')
+        .collection('ginasios')
+        .doc(gymId)
+        .collection('exercicios') 
         .add(novoExercicio);
 
       Alert.alert('Sucesso', 'Exercício adicionado com sucesso!');
-      navigation.goBack(); 
+      navigation.goBack();  
     } catch (error) {
       console.error(error);
       Alert.alert('Erro', 'Não foi possível adicionar o exercício. Tente novamente.');

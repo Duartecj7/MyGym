@@ -54,7 +54,7 @@ const UserPage = () => {
     <BackgroundWrapper>
       <View style={styles.container}>
         <View style={styles.innerContainer}>
-          <Text style={styles.header}>Informações do utilizador</Text>
+          <Text style={styles.header}>Informações</Text>
 
           <Text style={styles.label}>E-mail: {email}</Text>
 

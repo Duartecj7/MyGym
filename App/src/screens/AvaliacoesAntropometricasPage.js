@@ -38,7 +38,7 @@ const AvaliacoesAntropometricasPage = ({ route, navigation }) => {
         .collection('avaliacoesAntropometricas')
         .add(evaluation);
 
-      Alert.alert('Sucesso', 'Avaliação salva com sucesso!');
+      Alert.alert('Sucesso', 'Avaliação guardada com sucesso!');
       fetchEvaluations(); 
       setWeight('');
       setHeight('');

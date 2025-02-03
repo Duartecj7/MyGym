@@ -5,33 +5,44 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
-const RegisterPage = ({ navigation }) => {
+const RegisterPage = ({ route, navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nome, setNome] = useState('');
+
+  const { gymId } = route.params;
+  console.log(route.params);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
       Alert.alert('Erro', 'As passwords não coincidem');
       return;
     }
-  
+
     if (email && password) {
       try {
         const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-  
+
         const userId = userCredential.user.uid;
-  
-        await firestore().collection('clientes').doc(userId).set({
-          email: email,
-          password: password,
-          dataCriacao: new Date().toISOString(),
-          ativo: true,
-          roles: "cliente"
-        });
-  
+
+        await firestore()
+          .collection('ginasios') 
+          .doc(gymId)  
+          .collection('utilizadores')  
+          .doc(userId)  
+          .set({
+            email: email,
+            nome: nome,
+            password: password,
+            dataCriacao: new Date().toISOString(),
+            ativo: false,
+            role: 'cliente',
+            gymId: gymId,
+          });
+
         Alert.alert('Sucesso', 'Utilizador criado e registado!');
-        navigation.navigate('Login');
+        navigation.navigate('Login', { gymId: gymId });
       } catch (err) {
         console.log(err);
         const errorMessage = err.message || 'Falha a criar a conta. Tente novamente.';
@@ -56,6 +67,13 @@ const RegisterPage = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Nome"
+          value={nome}
+          onChangeText={setNome}
+          keyboardType="name-phone-pad"
         />
         <TextInput
           style={styles.input}

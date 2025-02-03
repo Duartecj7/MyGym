@@ -11,13 +11,14 @@ import ListaUtilizadoresPage from '../screens/ListaUtilizadoresPage';
 import CriarTreinoPage from '../screens/CriarTreinoPage';
 import TreinosTreinadorPage from '../screens/TreinosTreinadorPage';
 import TreinosUtilizadorPage from '../screens/TreinosUtilizadorPage';
-
+import GinasiosPage from '../screens/GinasiosPage';
+import ModalidadesTreinadorPage from '../screens/ModalidadesTreinadorPage'
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="Ginasios">
         <Stack.Screen name="Login" component={LoginPage} />
         <Stack.Screen name="Register" component={RegisterPage} />
         <Stack.Screen name="Home" component={HomePage} />
@@ -28,6 +29,8 @@ export default function AppNavigator() {
         <Stack.Screen name="CriarTreino" component={CriarTreinoPage} options={{ title: 'Criar Treino' }} />
         <Stack.Screen name="TreinosTreinador" component={TreinosTreinadorPage} options={{ title: 'Treinos Agendados' }} />
         <Stack.Screen name="TreinosUtilizador" component={TreinosUtilizadorPage} options={{ title: 'Treinos Agendados' }} />
+        <Stack.Screen name="Ginasios" component={GinasiosPage} options= {{title: 'Ginásios'}} />
+        <Stack.Screen name="Modalidades" component={ModalidadesTreinadorPage} options= {{title: 'Modalidades'}} />
 
 
       </Stack.Navigator>

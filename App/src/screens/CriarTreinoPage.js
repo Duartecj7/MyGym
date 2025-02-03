@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
-const CriarTreinoPage = ({ navigation }) => {
+const CriarTreinoPage = ({ route, navigation }) => {
   const [exercicios, setExercicios] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [selectedExercicios, setSelectedExercicios] = useState([]);
@@ -16,9 +16,15 @@ const CriarTreinoPage = ({ navigation }) => {
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  const { gymId } = route.params; 
 
   useEffect(() => {
-    firestore().collection('exercicios').get()
+    firestore()
+      .collection('ginasios')
+      .doc(gymId)
+      .collection('exercicios')
+      .get()
       .then(snapshot => {
         const exerciciosList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setExercicios(exerciciosList);
@@ -27,16 +33,17 @@ const CriarTreinoPage = ({ navigation }) => {
         console.error('Erro a procurar os exercícios:', error);
       });
 
-    firestore().collection('clientes').get()
+    firestore().collection('ginasios')
+    .doc(gymId).collection('utilizadores').get()
       .then(snapshot => {
         const usuariosList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const clientes = usuariosList.filter(usuario => (usuario.roles  === 'cliente'));
+        const clientes = usuariosList.filter(usuario => usuario.role === 'cliente');
         setUsuarios(clientes);
       })
       .catch(error => {
         console.error('Erro a procurar os utilizadores:', error);
       });
-  }, []);
+  }, [gymId]);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -107,7 +114,11 @@ const CriarTreinoPage = ({ navigation }) => {
       treinadorId: treinadorId, 
     };
 
-    firestore().collection('treinos').add(treino)
+    firestore()
+      .collection('ginasios')
+      .doc(gymId)
+      .collection('treinos')
+      .add(treino)
       .then(() => {
         Alert.alert('Sucesso', 'Treino criado com sucesso!');
         navigation.goBack();
@@ -117,9 +128,10 @@ const CriarTreinoPage = ({ navigation }) => {
         Alert.alert('Erro', 'Não foi possível criar o treino.');
       });
   };
+
   const renderExercicioItem = ({ item }) => {
     const isSelected = selectedExercicios.includes(item.id);
-  
+
     return (
       <View style={styles.itemContainer}>
         <View style={styles.row}>
@@ -129,7 +141,7 @@ const CriarTreinoPage = ({ navigation }) => {
           />
           <Text style={styles.checkboxText}>{item.nome}</Text>
         </View>
-  
+
         {isSelected && (
           <View style={styles.formContainer}>
             <Text style={styles.label}>Repetições:</Text>
@@ -141,7 +153,7 @@ const CriarTreinoPage = ({ navigation }) => {
               buttonStyle={styles.spinnerButton}
               buttonTextStyle={styles.spinnerButtonText}
             />
-  
+
             <Text style={styles.label}>Séries:</Text>
             <InputSpinner
               min={1}
@@ -151,7 +163,7 @@ const CriarTreinoPage = ({ navigation }) => {
               buttonStyle={styles.spinnerButton}
               buttonTextStyle={styles.spinnerButtonText}
             />
-  
+
             <Text style={styles.label}>Tempo (min):</Text>
             <InputSpinner
               min={1}
@@ -170,7 +182,7 @@ const CriarTreinoPage = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.dateTimeContainer}>
-        <Text style={styles.subTitle}>Data: {date.toLocaleDateString('pt-PT')} | Hora: {time.toLocaleTimeString('pt-PT',{ hour: '2-digit', minute: '2-digit' })}</Text>
+        <Text style={styles.subTitle}>Data: {date.toLocaleDateString('pt-PT')} | Hora: {time.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</Text>
       </View>
 
       <View style={styles.splitContainer}>

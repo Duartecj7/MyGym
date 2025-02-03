@@ -11,9 +11,9 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (route.params) {
-      const { role, clienteId } = route.params; 
+      const { role, clientEmail } = route.params; 
       setRole(role); 
-      console.log('Client ID:', clienteId); 
+      console.log('Client email:', clientEmail); 
       console.log('Client Role:', role);
     }
   }, [route.params]);
